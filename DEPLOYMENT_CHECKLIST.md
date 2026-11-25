@@ -39,7 +39,7 @@ Do not enable paid/entry-fee rooms or call the game production-ready until the f
    npm run db:migrate
    ```
 
-6. Confirm `npx prisma migrate status` reports all migrations applied. Apply both `prisma/migrations/20261126000000_initial/` and `prisma/migrations/20261126010500_game_persistence/`; never edit an already-applied migration.
+6. Confirm `npx prisma migrate status` reports all migrations applied. `prisma migrate deploy` applies all pending migrations in order, including `20261126000000_initial`, `20261126010500_game_persistence`, and `20261126020000_optional_user_relations_set_null`; never edit an already-applied migration.
 
 ## 2. Deploy the backend to Render
 
