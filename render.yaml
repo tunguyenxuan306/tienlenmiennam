@@ -4,7 +4,7 @@ services:
     runtime: node
     rootDir: .
     buildCommand: npm ci --include=dev && npm run db:generate && npm run build --workspace apps/server
-    startCommand: npm run db:migrate && npm run start --workspace apps/server
+    startCommand: node apps/server/scripts/render-migration-bootstrap.mjs && npm run db:migrate && npm run start --workspace apps/server
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
