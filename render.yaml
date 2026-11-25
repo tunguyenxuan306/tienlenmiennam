@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: tien-len-server
+    runtime: node
+    rootDir: .
+    buildCommand: npm ci --include=dev && npm run db:generate && npm run build --workspace apps/server
+    startCommand: npm run db:migrate && npm run start --workspace apps/server
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tien-len-db
+          property: connectionString
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        sync: false
+
+databases:
+  - name: tien-len-db
+    databaseName: tien_len
+    plan: free

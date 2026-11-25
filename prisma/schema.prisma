@@ -1,0 +1,387 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+enum AccountStatus {
+  ACTIVE
+  BANNED
+  DISABLED
+}
+
+enum RoomStatus {
+  WAITING
+  PLAYING
+  CLOSED
+  CANCELLED
+}
+
+enum RoomVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum SessionStatus {
+  WAITING
+  PLAYING
+  FINISHED
+  CANCELLED
+}
+
+enum RoundStatus {
+  PLAYING
+  FINISHED
+}
+
+enum SettlementStatus {
+  NOT_REQUIRED
+  PENDING
+  PROCESSING
+  SETTLED
+  FAILED
+}
+
+enum ActionType {
+  PLAY
+  PASS
+  START
+  END
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAW
+  ENTRY_FEE
+  WIN
+  LOSS
+  ADMIN_ADD
+  ADMIN_DEDUCT
+  PENALTY
+  REWARD
+  ADJUSTMENT
+}
+
+enum AdminLogAction {
+  ADMIN_LOGIN
+  ADMIN_LOGOUT
+  ACCOUNT_CREATED
+  ACCOUNT_BANNED
+  ACCOUNT_UNBANNED
+  PASSWORD_RESET
+  WALLET_ADD
+  WALLET_DEDUCT
+  ROOM_KICK
+  ROOM_CLOSE
+  CONFIG_CHANGE
+  RULE_CHANGE
+  ROLE_CHANGE
+}
+
+model User {
+  id                 String          @id @default(cuid())
+  username           String          @unique
+  email              String?         @unique
+  nickname           String
+  passwordHash       String
+  avatarUrl          String?
+  role               UserRole        @default(USER)
+  status             AccountStatus   @default(ACTIVE)
+  mustChangePassword Boolean         @default(false)
+  gamesPlayed        Int             @default(0)
+  gamesWon           Int             @default(0)
+  lastLoginAt        DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  wallet             Wallet?
+  refreshTokens      RefreshToken[]
+  ownedRooms         GameRoom[]      @relation("RoomOwner")
+  roomPlayers        RoomPlayer[]
+  spectators         Spectator[]
+  gameActions        GameAction[]
+  gamePrivateStates  GamePrivateState[]
+  gameResults        GameResult[]
+  chatMessages       ChatMessage[]
+  banRecords         BanRecord[]
+  adminLogs          AdminLog[]      @relation("AdminActor")
+  targetLogs         AdminLog[]      @relation("AdminTarget")
+  transactionsFrom   Transaction[]   @relation("TransactionActor")
+  transactionsTo     Transaction[]   @relation("TransactionTarget")
+
+  @@index([status])
+  @@index([nickname])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Wallet {
+  id           String        @id @default(cuid())
+  userId       String        @unique
+  balance      BigInt        @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+}
+
+model Transaction {
+  id          String          @id @default(cuid())
+  code        String          @unique @default(cuid())
+  walletId    String
+  targetUserId String?
+  actorUserId String?
+  idempotencyKey String?      @unique
+  type        TransactionType
+  amount      BigInt
+  balanceBefore BigInt
+  balanceAfter  BigInt
+  reason      String
+  source      String
+  createdAt   DateTime        @default(now())
+  wallet      Wallet          @relation(fields: [walletId], references: [id])
+  targetUser  User?           @relation("TransactionTarget", fields: [targetUserId], references: [id])
+  actorUser   User?           @relation("TransactionActor", fields: [actorUserId], references: [id])
+
+  @@index([walletId, createdAt])
+  @@index([type, createdAt])
+}
+
+model GameRoom {
+  id          String          @id @default(cuid())
+  code        String          @unique
+  name        String
+  ownerId     String
+  visibility  RoomVisibility  @default(PUBLIC)
+  status      RoomStatus      @default(WAITING)
+  entryFee    BigInt          @default(0)
+  maxPlayers  Int             @default(4)
+  maxSpectators Int           @default(20)
+  botEnabled  Boolean         @default(false)
+  closedAt    DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  owner       User            @relation("RoomOwner", fields: [ownerId], references: [id])
+  players     RoomPlayer[]
+  spectators  Spectator[]
+  sessions    GameSession[]
+  chatMessages ChatMessage[]
+
+  @@index([status])
+  @@index([visibility])
+}
+
+model RoomPlayer {
+  id          String   @id @default(cuid())
+  roomId      String
+  userId      String?
+  seat        Int
+  isBot       Boolean  @default(false)
+  botName     String?
+  botLevel    String?
+  isReady     Boolean  @default(false)
+  connected   Boolean  @default(true)
+  joinedAt    DateTime @default(now())
+  leftAt      DateTime?
+  room        GameRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user        User?    @relation(fields: [userId], references: [id])
+
+  @@unique([roomId, seat])
+  @@unique([roomId, userId])
+  @@index([userId])
+}
+
+model Spectator {
+  id       String   @id @default(cuid())
+  roomId   String
+  userId   String
+  joinedAt DateTime @default(now())
+  leftAt   DateTime?
+  room     GameRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@unique([roomId, userId])
+}
+
+model GameSession {
+  id                String           @id @default(cuid())
+  roomId            String
+  status            SessionStatus    @default(WAITING)
+  state             Json
+  version           Int              @default(0)
+  turnDeadlineAt    DateTime?
+  settlementStatus  SettlementStatus @default(NOT_REQUIRED)
+  settledAt         DateTime?
+  startedAt         DateTime?
+  endedAt           DateTime?
+  createdAt         DateTime         @default(now())
+  room              GameRoom         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  rounds            GameRound[]
+  results           GameResult[]
+  privateStates     GamePrivateState[]
+  settlements       Settlement[]
+
+  @@index([roomId, status])
+}
+
+model GameRound {
+  id        String      @id @default(cuid())
+  sessionId String
+  roundNo   Int
+  status    RoundStatus @default(PLAYING)
+  leadSeat  Int
+  currentSeat Int
+  publicState Json
+  startedAt DateTime    @default(now())
+  endedAt   DateTime?
+  session   GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  actions   GameAction[]
+
+  @@unique([sessionId, roundNo])
+}
+
+model GameAction {
+  id        String     @id @default(cuid())
+  roundId   String
+  actorId   String?
+  actorSeat Int
+  isBot     Boolean    @default(false)
+  type      ActionType
+  cards     Json?
+  publicData Json?
+  idempotencyKey String? @unique
+  stateVersion Int?
+  createdAt DateTime   @default(now())
+  round     GameRound  @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  actor     User?      @relation(fields: [actorId], references: [id])
+
+  @@index([roundId, createdAt])
+}
+
+model GamePrivateState {
+  id        String      @id @default(cuid())
+  sessionId String
+  seat      Int
+  userId    String?
+  isBot     Boolean     @default(false)
+  cards     Json
+  updatedAt DateTime    @updatedAt
+  session   GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user      User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([sessionId, seat])
+  @@index([userId])
+}
+
+model GameResult {
+  id        String      @id @default(cuid())
+  sessionId String
+  userId    String
+  rank      Int
+  payout    BigInt
+  isWin     Boolean     @default(false)
+  createdAt DateTime    @default(now())
+  session   GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id])
+
+  @@unique([sessionId, userId])
+}
+
+model Settlement {
+  id             String           @id @default(cuid())
+  sessionId      String
+  idempotencyKey String           @unique
+  status         SettlementStatus @default(PENDING)
+  totalAmount    BigInt           @default(0)
+  attempts       Int              @default(0)
+  lastError      String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  settledAt      DateTime?
+  session        GameSession      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId])
+  @@index([status, updatedAt])
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  roomId    String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+  room      GameRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([roomId, createdAt])
+}
+
+model BanRecord {
+  id        String   @id @default(cuid())
+  userId    String
+  reason    String
+  bannedAt  DateTime @default(now())
+  expiresAt DateTime?
+  liftedAt  DateTime?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, liftedAt])
+}
+
+model AdminLog {
+  id          String         @id @default(cuid())
+  actorId     String
+  targetId    String?
+  action      AdminLogAction
+  before      Json?
+  after       Json?
+  ipAddress   String?
+  metadata    Json?
+  createdAt   DateTime       @default(now())
+  actor       User           @relation("AdminActor", fields: [actorId], references: [id])
+  target      User?          @relation("AdminTarget", fields: [targetId], references: [id])
+
+  @@index([action, createdAt])
+  @@index([actorId, createdAt])
+}
+
+model GameSettings {
+  id                String   @id @default("global")
+  allowToiTrang     Boolean  @default(true)
+  penaltyHeo        Boolean  @default(true)
+  penaltyQuad        Boolean  @default(true)
+  penaltyPairs      Boolean  @default(true)
+  turnTimeoutSeconds Int     @default(30)
+  maxRooms          Int      @default(100)
+  maxSpectators     Int      @default(20)
+  updatedAt         DateTime @updatedAt
+}
+
+model IdempotencyRecord {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  scope     String
+  response  Json
+  createdAt DateTime @default(now())
+
+  @@index([scope, createdAt])
+}
