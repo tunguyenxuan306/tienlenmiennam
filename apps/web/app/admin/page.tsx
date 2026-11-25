@@ -9,7 +9,7 @@ export default function AdminPage() {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
-  const api = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+  const api = process.env.NEXT_PUBLIC_API_URL ?? "https://tienlenmiennam-65yq.onrender.com";
 
   useEffect(() => {
     authorizedFetch(`${api}/api/admin/users`)

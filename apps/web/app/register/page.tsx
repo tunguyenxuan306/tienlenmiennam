@@ -6,7 +6,7 @@ export default function RegisterPage() {
   const [form, setForm] = useState({ username: "", nickname: "", password: "", email: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const api = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+  const api = process.env.NEXT_PUBLIC_API_URL ?? "https://tienlenmiennam-65yq.onrender.com";
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();

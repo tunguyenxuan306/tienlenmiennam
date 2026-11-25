@@ -12,7 +12,7 @@ export default function LobbyPage() {
   const [error, setError] = useState("");
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const api = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+  const api = process.env.NEXT_PUBLIC_API_URL ?? "https://tienlenmiennam-65yq.onrender.com";
 
   const load = useCallback(async () => {
     if (!token) { setLoading(false); return; }

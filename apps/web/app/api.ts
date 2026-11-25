@@ -1,4 +1,4 @@
-const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "https://tienlenmiennam-65yq.onrender.com";
 
 export async function refreshAccessToken() {
   const refreshToken = localStorage.getItem("refreshToken");

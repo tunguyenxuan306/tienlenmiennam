@@ -24,7 +24,7 @@ const configuredOrigins = (process.env.CORS_ORIGINS ?? process.env.FRONTEND_URL 
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
-const origins = configuredOrigins.length ? configuredOrigins : ["http://localhost:3000"];
+const origins = configuredOrigins.length ? configuredOrigins : ["https://tienlenmiennam-sigma.vercel.app"];
 const isProduction = process.env.NODE_ENV === "production";
 
 if (isProduction && (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32)) {

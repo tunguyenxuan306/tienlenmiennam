@@ -7,7 +7,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<Record<string, string | number | null> | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
-  const api = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+  const api = process.env.NEXT_PUBLIC_API_URL ?? "https://tienlenmiennam-65yq.onrender.com";
 
   useEffect(() => {
     if (!localStorage.getItem("accessToken")) { window.location.href = "/login"; return; }

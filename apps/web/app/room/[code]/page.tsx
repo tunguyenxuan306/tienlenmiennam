@@ -19,12 +19,12 @@ export default function RoomPage() {
   const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => {
-    const api = process.env.NEXT_PUBLIC_SOCKET_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+    const api = process.env.NEXT_PUBLIC_SOCKET_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "https://tienlenmiennam-65yq.onrender.com";
     if (!localStorage.getItem("accessToken")) { window.location.href = "/login"; return; }
     let client: Socket | null = null;
     let cancelled = false;
     let refreshTimer: number | undefined;
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "https://tienlenmiennam-65yq.onrender.com";
     void authorizedFetch(`${apiUrl}/api/rooms/${params.code}/join`, { method: "POST" }).then(async (response) => {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Không thể vào phòng");
